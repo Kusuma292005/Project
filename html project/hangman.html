@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hangman</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; background: #222; color: white; }
+        .word { font-size: 24px; margin: 20px; }
+        .buttons button { margin: 5px; padding: 10px; font-size: 18px; cursor: pointer; }
+        #hint { font-size: 18px; color: lightgray; }
+        .btn { margin: 10px auto; padding: 10px 20px; font-size: 16px; cursor: pointer; background: #444; color: white; border: none; border-radius: 5px; display: block; width: 200px; }
+        .btn:hover { background: #666; }
+        #restart { display: none; }
+        canvas { background: white; display: block; margin: 20px auto; }
+    </style>
+</head>
+<body>
+    <h1>Hangman</h1>
+    <canvas id="hangman" width="200" height="250"></canvas>
+    <p id="hint"></p>
+    <div class="word" id="word-display"></div>
+    <div class="buttons" id="buttons"></div>
+    <h2 id="status"></h2>
+    <button id="restart" class="btn" onclick="resetGame()">Play Again</button>
+    <button class="btn" onclick="location.href='index.html'">Main Menu</button>
+    
+    <script>
+      const words = [
+            { word: "javascript", hint: "A popular programming language." },
+            { word: "ocean", hint: "A large body of salt water covering most of Earth." },
+            { word: "elephant", hint: "A large land animal with a trunk." },
+            { word: "volcano", hint: "A mountain that erupts with lava." },
+            { word: "rainbow", hint: "A colorful arc seen after rain." },
+            { word: "giraffe", hint: "The tallest land animal." },
+            { word: "tornado", hint: "A violent, rotating column of air." },
+            { word: "moonlight", hint: "The glow seen at night from the sky." },
+            { word: "oxygen", hint: "A gas essential for human survival." },
+            { word: "chocolate", hint: "A sweet treat made from cocoa beans." },
+            { word: "hurricane", hint: "A strong tropical storm with heavy winds." },
+            { word: "penguin", hint: "A flightless bird that lives in cold regions." },
+            { word: "internet", hint: "A global network connecting millions of devices." },
+            { word: "library", hint: "A place where books are kept for reading." },
+            { word: "bicycle", hint: "A two-wheeled vehicle powered by pedaling." },
+            { word: "mystery", hint: "A genre of story involving secrets or crime." },
+            { word: "adventure", hint: "An exciting or unusual experience." },
+            { word: "universe", hint: "All of space, including stars and galaxies." },
+            { word: "python", hint: "A programming language named after a snake." },
+            { word: "glacier", hint: "A massive ice formation that moves slowly." },
+            { word: "desert", hint: "A dry, sandy region with little rain." },
+            { word: "pyramid", hint: "A triangular-shaped structure built in ancient Egypt." },
+            { word: "waterfall", hint: "A place where a river flows over a cliff." },
+            { word: "fireworks", hint: "Colorful explosions seen during celebrations." },
+            { word: "detective", hint: "Someone who solves mysteries and crimes." },
+            { word: "wizard", hint: "A person skilled in magic or sorcery." },
+            { word: "puzzle", hint: "A game or problem that tests intelligence." },
+            { word: "robot", hint: "A machine that can perform tasks automatically." },
+            { word: "spaceship", hint: "A vehicle used to travel in space." },
+            { word: "campfire", hint: "A small outdoor fire used for warmth or cooking." },
+            { word: "watermelon", hint: "A juicy fruit with a green rind and red interior." },
+            { word: "avocado", hint: "A fruit with a creamy texture and large seed." },
+            { word: "astronaut", hint: "A person who travels into space." },
+            { word: "umbrella", hint: "A tool used to protect against rain or sun." },
+            { word: "earthquake", hint: "A sudden shaking of the Earth's surface." },
+            { word: "dragon", hint: "A mythical creature that breathes fire." },
+            { word: "treasure", hint: "Valuable items hidden or lost." },
+            { word: "moon", hint: "Earth's only natural satellite." },
+            { word: "galaxy", hint: "A collection of billions of stars." },
+            { word: "telescope", hint: "A tool used to observe distant objects in space." },
+            { word: "mammoth", hint: "A large, extinct, elephant-like creature." },
+            { word: "blackhole", hint: "A space object with gravity so strong that light cannot escape." }
+        ];
+
+        const canvas = document.getElementById("hangman");
+        const ctx = canvas.getContext("2d");
+        
+        function drawBase() { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); ctx.moveTo(20, 240); ctx.lineTo(180, 240); ctx.moveTo(50, 240); ctx.lineTo(50, 20); ctx.lineTo(120, 20); ctx.lineTo(120, 40); ctx.stroke(); }
+        function drawHead() { ctx.beginPath(); ctx.arc(120, 55, 15, 0, Math.PI * 2); ctx.stroke(); }
+        function drawBody() { ctx.moveTo(120, 70); ctx.lineTo(120, 130); ctx.stroke(); }
+        function drawLeftArm() { ctx.moveTo(120, 80); ctx.lineTo(100, 110); ctx.stroke(); }
+        function drawRightArm() { ctx.moveTo(120, 80); ctx.lineTo(140, 110); ctx.stroke(); }
+        function drawLeftLeg() { ctx.moveTo(120, 130); ctx.lineTo(100, 170); ctx.stroke(); }
+        function drawRightLeg() { ctx.moveTo(120, 130); ctx.lineTo(140, 170); ctx.stroke(); }
+        
+        const parts = [drawBase, drawHead, drawBody, drawRightArm, drawLeftArm, drawLeftLeg, drawRightLeg];
+        let selected, word, guessed, attempts;
+        
+        let usedWords = new Set(); // Tracks used words
+
+function startGame() {
+    if (usedWords.size === words.length) {
+        usedWords.clear(); // Reset when all words are used
+    }
+
+    let availableWords = words.filter(w => !usedWords.has(w.word));
+    selected = availableWords[Math.floor(Math.random() * availableWords.length)];
+    
+    usedWords.add(selected.word); // Mark the word as used
+    
+    word = selected.word.toUpperCase().split("");
+    guessed = Array(word.length).fill("_");
+    attempts = 6;
+    
+    document.getElementById("hint").innerText = "Hint: " + selected.hint;
+    document.getElementById("word-display").innerText = guessed.join(" ");
+    document.getElementById("status").innerText = `Attempts Left: ${attempts}`;
+    document.getElementById("buttons").innerHTML = "";
+    document.getElementById("restart").style.display = "none";
+    
+    drawBase();
+    createButtons();
+}
+
+        
+        function checkLetter(letter, btn) {
+            btn.disabled = true;
+            if (word.includes(letter)) {
+                word.forEach((char, index) => { if (char === letter) guessed[index] = letter; });
+            } else {
+                attempts--;
+                parts[6 - attempts]();
+            }
+            
+            document.getElementById("word-display").innerText = guessed.join(" ");
+            document.getElementById("status").innerText = attempts > 0 ? `Attempts Left: ${attempts}` : "Game Over! The word was " + selected.word;
+            
+            if (!guessed.includes("_")) {
+                document.getElementById("status").innerText = "You Win🎊";
+                endGame();
+            }
+            if (attempts === 0) { endGame(); }
+        }
+        
+        function createButtons() {
+            let buttonsDiv = document.getElementById("buttons");
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(letter => {
+                let btn = document.createElement("button");
+                btn.innerText = letter;
+                btn.onclick = () => checkLetter(letter, btn);
+                buttonsDiv.appendChild(btn);
+            });
+        }
+        
+        function endGame() { document.querySelectorAll(".buttons button").forEach(btn => btn.disabled = true); document.getElementById("restart").style.display = "block"; }
+        function resetGame() { startGame(); }
+        startGame();
+    </script>
+</body>
+</html>
